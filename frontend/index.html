@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Job Displacement Risk Predictor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+      border-bottom: 1px solid #1e40af;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo { font-size: 2rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; color: #60a5fa; }
+    header p  { font-size: 0.85rem; color: #94a3b8; margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      background: #1e3a5f;
+      border: 1px solid #3b82f6;
+      color: #60a5fa;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #60a5fa;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    .field label span { color: #60a5fa; font-weight: 600; }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    select:focus, input[type="number"]:focus {
+      border-color: #3b82f6;
+    }
+
+    /* ── Predict button ── */
+    .btn-predict {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: transform 0.1s, box-shadow 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .btn-predict:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(37,99,235,0.4);
+    }
+    .btn-predict:active { transform: translateY(0); }
+    .btn-predict:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── Result panel ── */
+    #result-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .result-card {
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.4s;
+    }
+    .result-card .risk-label {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 8px 0 4px;
+    }
+    .result-card .confidence {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .result-card .description {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      text-align: left;
+    }
+
+    /* ── Probability bars ── */
+    .prob-section h3 {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 12px;
+    }
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .prob-row .label {
+      width: 110px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .prob-bar-bg {
+      flex: 1;
+      background: #1e293b;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .prob-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s ease;
+      width: 0%;
+    }
+    .prob-val {
+      width: 38px;
+      text-align: right;
+      font-size: 0.78rem;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* ── Input summary ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .summary-item {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+    }
+    .summary-item .s-label { color: #64748b; margin-bottom: 2px; }
+    .summary-item .s-val   { color: #e2e8f0; font-weight: 600; }
+
+    /* ── Placeholder ── */
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: #475569;
+      text-align: center;
+      gap: 12px;
+    }
+    .placeholder .icon { font-size: 3rem; }
+    .placeholder p { font-size: 0.85rem; }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #1e293b;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      grid-column: 1 / -1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat .s-num { font-size: 1.4rem; font-weight: 800; color: #60a5fa; }
+    .stat .s-lbl { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #475569;
+      font-size: 0.75rem;
+      border-top: 1px solid #1e293b;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>AI Job Displacement Risk Predictor</h1>
+    <p>Serverless ML · AWS Lambda + API Gateway + S3</p>
+  </div>
+  <div class="badge">⚡ Serverless</div>
+</header>
+
+<div class="container">
+
+  <!-- ── Stats Bar ── -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="s-num">20</div>
+      <div class="s-lbl">Job Categories</div>
+    </div>
+    <div class="stat">
+      <div class="s-num">2,000</div>
+      <div class="s-lbl">Training Records</div>
+    </div>
+    <div class="stat">
+      <div class="s-num">98%</div>
+      <div class="s-lbl">Model Accuracy</div>
+    </div>
+    <div class="stat">
+      <div class="s-num">8</div>
+      <div class="s-lbl">Features Analyzed</div>
+    </div>
+    <div class="stat">
+      <div class="s-num">3</div>
+      <div class="s-lbl">Risk Levels</div>
+    </div>
+  </div>
+
+  <!-- ── Input Form ── -->
+  <div class="card">
+    <h2>📋 Job Feature Input</h2>
+
+    <div class="field">
+      <label>Routine Task % <span id="val-routine">50%</span></label>
+      <input type="range" id="routine_task_pct" min="0" max="100" value="50"
+             oninput="document.getElementById('val-routine').textContent=this.value+'%'">
+    </div>
+
+    <div class="field">
+      <label>Creativity Score <span id="val-creativity">50%</span></label>
+      <input type="range" id="creativity_score" min="0" max="100" value="50"
+             oninput="document.getElementById('val-creativity').textContent=this.value+'%'">
+    </div>
+
+    <div class="field">
+      <label>Social Skill Score <span id="val-social">50%</span></label>
+      <input type="range" id="social_skill_score" min="0" max="100" value="50"
+             oninput="document.getElementById('val-social').textContent=this.value+'%'">
+    </div>
+
+    <div class="field">
+      <label>AI Tool Exposure <span id="val-ai">50%</span></label>
+      <input type="range" id="ai_tool_exposure" min="0" max="100" value="50"
+             oninput="document.getElementById('val-ai').textContent=this.value+'%'">
+    </div>
+
+    <div class="field">
+      <label>Education Level <span id="val-edu">3</span></label>
+      <input type="range" id="education_level" min="1" max="5" value="3"
+             oninput="document.getElementById('val-edu').textContent=this.value">
+    </div>
+
+    <div class="field">
+      <label>Years of Experience <span id="val-exp">5</span></label>
+      <input type="range" id="years_experience" min="0" max="40" value="5"
+             oninput="document.getElementById('val-exp').textContent=this.value">
+    </div>
+
+    <div class="field">
+      <label>Annual Salary (USD)</label>
+      <input type="number" id="annual_salary_usd" value="60000" min="20000" max="400000" step="1000">
+    </div>
+
+    <div class="field">
+      <label>Industry</label>
+      <select id="industry">
+        <option value="0">Administrative</option>
+        <option value="1">Sales & Customer Service</option>
+        <option value="2">Finance & Accounting</option>
+        <option value="3">Transportation & Logistics</option>
+        <option value="4">Healthcare</option>
+        <option value="5">Technology</option>
+        <option value="6">Education</option>
+        <option value="7">Creative & Marketing</option>
+        <option value="8">Social Services</option>
+        <option value="9">Human Resources</option>
+        <option value="10">Legal</option>
+        <option value="11">Food & Hospitality</option>
+        <option value="12">Security</option>
+      </select>
+    </div>
+
+    <button class="btn-predict" onclick="predict()">🔮 Predict Displacement Risk</button>
+  </div>
+
+  <!-- ── Result Panel ── -->
+  <div id="result-panel">
+    <div class="card">
+      <h2>📊 Prediction Result</h2>
+      <div id="result-content">
+        <div class="placeholder">
+          <div class="icon">🎯</div>
+          <p>Fill in the job features on the left<br>and click <strong>Predict</strong> to see the result</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  🚀 Deployed on AWS Lambda · API Gateway · S3 &nbsp;|&nbsp;
+  Data Science Capstone · Yogananda16 &nbsp;|&nbsp;
+  Topic: AI Job Displacement Risk · 2026
+</footer>
+
+<script>
+  // ── IMPORTANT: Replace this with your real API Gateway URL after deployment ──
+  const API_URL = "YOUR_API_GATEWAY_URL/predict";
+
+  async function predict() {
+    const btn = document.querySelector('.btn-predict');
+    btn.disabled = true;
+    btn.textContent = '⏳ Predicting...';
+
+    // Show spinner
+    document.getElementById('result-content').innerHTML = `
+      <div class="placeholder">
+        <div class="spinner"></div>
+        <p>Running ML model on AWS Lambda...</p>
+      </div>`;
+
+    const payload = {
+      routine_task_pct:   parseFloat(document.getElementById('routine_task_pct').value) / 100,
+      creativity_score:   parseFloat(document.getElementById('creativity_score').value) / 100,
+      social_skill_score: parseFloat(document.getElementById('social_skill_score').value) / 100,
+      ai_tool_exposure:   parseFloat(document.getElementById('ai_tool_exposure').value) / 100,
+      education_level:    parseInt(document.getElementById('education_level').value),
+      years_experience:   parseInt(document.getElementById('years_experience').value),
+      annual_salary_usd:  parseInt(document.getElementById('annual_salary_usd').value),
+      industry:           parseInt(document.getElementById('industry').value),
+    };
+
+    try {
+      const res  = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      showResult(data, payload);
+    } catch (err) {
+      document.getElementById('result-content').innerHTML = `
+        <div class="placeholder">
+          <div class="icon">❌</div>
+          <p style="color:#ef4444">Error connecting to API.<br>Make sure your API_URL is set correctly.</p>
+          <small style="color:#64748b;margin-top:8px">${err.message}</small>
+        </div>`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🔮 Predict Displacement Risk';
+  }
+
+  function showResult(data, payload) {
+    const p    = data.prediction;
+    const prob = data.probabilities;
+
+    document.getElementById('result-content').innerHTML = `
+      <div class="result-card" style="border-color:${p.color}">
+        <div style="font-size:1.8rem">${p.risk_code === 0 ? '🟢' : p.risk_code === 1 ? '🟡' : '🔴'}</div>
+        <div class="risk-label" style="color:${p.color}">${p.risk_level}</div>
+        <div class="confidence">Confidence: <strong>${p.confidence}%</strong></div>
+        <div class="description">${p.description}</div>
+      </div>
+
+      <div class="card prob-section" style="padding:16px">
+        <h3>Risk Probability Breakdown</h3>
+        <div class="prob-row">
+          <div class="label">🟢 Low Risk</div>
+          <div class="prob-bar-bg"><div class="prob-bar" id="bar-low" style="background:#22c55e"></div></div>
+          <div class="prob-val" id="pv-low">0%</div>
+        </div>
+        <div class="prob-row">
+          <div class="label">🟡 Medium Risk</div>
+          <div class="prob-bar-bg"><div class="prob-bar" id="bar-med" style="background:#f59e0b"></div></div>
+          <div class="prob-val" id="pv-med">0%</div>
+        </div>
+        <div class="prob-row">
+          <div class="label">🔴 High Risk</div>
+          <div class="prob-bar-bg"><div class="prob-bar" id="bar-high" style="background:#ef4444"></div></div>
+          <div class="prob-val" id="pv-high">0%</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px">
+        <h3 style="font-size:0.85rem;color:#94a3b8;margin-bottom:12px">📥 Input Summary</h3>
+        <div class="summary-grid">
+          <div class="summary-item"><div class="s-label">Industry</div><div class="s-val">${data.input_summary.industry}</div></div>
+          <div class="summary-item"><div class="s-label">Salary</div><div class="s-val">$${data.input_summary.annual_salary_usd.toLocaleString()}</div></div>
+          <div class="summary-item"><div class="s-label">Routine Tasks</div><div class="s-val">${Math.round(data.input_summary.routine_task_pct * 100)}%</div></div>
+          <div class="summary-item"><div class="s-label">AI Exposure</div><div class="s-val">${Math.round(data.input_summary.ai_tool_exposure * 100)}%</div></div>
+          <div class="summary-item"><div class="s-label">Creativity</div><div class="s-val">${Math.round(data.input_summary.creativity_score * 100)}%</div></div>
+          <div class="summary-item"><div class="s-label">Experience</div><div class="s-val">${data.input_summary.years_experience} yrs</div></div>
+        </div>
+      </div>
+    `;
+
+    // Animate bars
+    setTimeout(() => {
+      document.getElementById('bar-low').style.width  = prob.low_risk + '%';
+      document.getElementById('bar-med').style.width  = prob.medium_risk + '%';
+      document.getElementById('bar-high').style.width = prob.high_risk + '%';
+      document.getElementById('pv-low').textContent   = prob.low_risk + '%';
+      document.getElementById('pv-med').textContent   = prob.medium_risk + '%';
+      document.getElementById('pv-high').textContent  = prob.high_risk + '%';
+    }, 100);
+  }
+</script>
+</body>
+</html>
